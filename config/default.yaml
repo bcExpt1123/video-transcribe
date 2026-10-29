@@ -1,0 +1,145 @@
+# =====================================================================
+#  video-transcribe — default configuration
+# ---------------------------------------------------------------------
+#  Copy this file (or run `vt init-config my.yaml`), change what you
+#  need, and pass it with `--config my.yaml`. Your file is merged on
+#  top of these defaults, so it only needs the keys you change.
+#  Full reference: docs/CONFIG.md
+# =====================================================================
+
+# Spoken language of the video: auto | en | zh
+#   auto = detect (only English and Chinese are supported).
+language: auto
+
+# ---------------------------------------------------------------------
+# Speech recognition (faster-whisper, runs locally, no API key)
+# ---------------------------------------------------------------------
+transcription:
+  # tiny | base | small | medium | large-v3 | large-v3-turbo
+  # Bigger = more accurate text, slower. For Chinese, medium or larger
+  # is recommended.
+  model: small
+  device: cpu            # cpu | cuda | auto
+  compute_type: int8     # int8 (fast on CPU) | int8_float32 | float32 | float16 (GPU)
+  beam_size: 5
+  cpu_threads: 0         # 0 = use all cores
+  # Voice Activity Detection: skips silence/music, which stops Whisper
+  # from inventing text there and keeps timestamps from drifting.
+  vad: true
+  vad_min_silence_ms: 500
+  vad_speech_pad_ms: 200
+  # Optional text to steer spelling of names/terms, e.g. "MacCMS, FFmpeg".
+  initial_prompt: null
+
+# ---------------------------------------------------------------------
+# Forced alignment (wav2vec2): refines every word's start/end time
+# against the actual audio. This is what makes subtitle timing precise.
+# ---------------------------------------------------------------------
+alignment:
+  enabled: true
+  # If the aligner's average confidence for a segment is below this
+  # value (0..1), Whisper's own word times are kept for that segment.
+  min_score: 0.2
+  models:
+    en: facebook/wav2vec2-base-960h
+    zh: jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn
+
+# ---------------------------------------------------------------------
+# Chinese text
+# ---------------------------------------------------------------------
+chinese:
+  script: simplified     # simplified | traditional | none (keep Whisper output)
+
+# ---------------------------------------------------------------------
+# How words are grouped into subtitle cues (times are in seconds)
+# ---------------------------------------------------------------------
+segmentation:
+  max_chars:             # max characters per LINE
+    en: 42
+    zh: 18
+  max_lines: 2           # lines per cue
+  max_duration: 6.0      # a cue never stays on screen longer than this
+  min_duration: 0.8      # short cues are extended (only into silence)
+  min_gap: 0.08          # minimum gap between two cues
+  pause_split: 0.6       # a pause this long always starts a new cue
+  lead_in: 0.05          # show a cue this much before the first word
+  # keep a cue this much after the last word. Chinese gets more: the
+  # aligner marks only the start of the final syllable, which keeps
+  # sounding for ~0.1-0.3 s. Extension only ever goes into silence.
+  end_padding:
+    en: 0.15
+    zh: 0.3
+  # Shift every subtitle by this many seconds (+ later, - earlier).
+  # Normally 0: container start-time offsets are corrected automatically.
+  time_offset: 0.0
+
+# ---------------------------------------------------------------------
+# Subtitle style (used for burned-in subtitles and the .ass file)
+# Sizes/margins are in pixels for a 1080p video and are scaled
+# automatically to the real video height.
+# Colors: "#RRGGBB" or "#AARRGGBB" (AA = opacity, FF = opaque, 00 = clear)
+# ---------------------------------------------------------------------
+style:
+  font_name: Noto Sans SC    # bundled in fonts/; covers Chinese + Latin
+  font_size: 52
+  bold: false
+  italic: false
+  primary_color: "#FFFFFF"   # text
+  outline_color: "#000000"   # text outline
+  back_color: "#A0000000"    # shadow / box background
+  border_style: outline      # outline | box (opaque box behind text)
+  outline: 2.5               # outline thickness (box: padding)
+  shadow: 1.0                # shadow distance
+  spacing: 0                 # extra letter spacing
+  # top-left | top-center | top-right | middle-left | middle-center |
+  # middle-right | bottom-left | bottom-center | bottom-right
+  position: bottom-center
+  margin_v: 60               # distance from top/bottom edge
+  margin_l: 40
+  margin_r: 40
+  # Per-language overrides of any key above.
+  overrides:
+    en: {}
+    zh:
+      font_size: 56
+
+# ---------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------
+output:
+  # burn = draw subtitles into the video (style always visible)
+  # soft = add a selectable subtitle track (fast, players ignore style)
+  # none = only write subtitle files
+  mode: burn
+  formats: [srt, ass]        # any of: srt, ass, vtt
+  dir: output                # relative paths are relative to the project folder
+  suffix: _subtitled
+  overwrite: false
+  keep_work_files: false     # keep extracted audio / transcript json
+
+# ---------------------------------------------------------------------
+# Video encoding for burn mode (audio is always copied untouched)
+# ---------------------------------------------------------------------
+encoding:
+  mp4:
+    video_codec: libx264
+    crf: 18                  # lower = better quality, bigger file
+    preset: medium           # ultrafast ... veryslow
+    pix_fmt: yuv420p         # most compatible; null = keep source format
+  webm:
+    video_codec: libvpx-vp9
+    crf: 32
+    cpu_used: 4              # 0 (slow, best) ... 8 (fast)
+    pix_fmt: yuv420p
+
+# ---------------------------------------------------------------------
+# Model downloads (into models/local/, once per model)
+# ---------------------------------------------------------------------
+download:
+  chunk_mb: 100              # large files are fetched in pieces of this size;
+                             # each piece is retried on its own, downloads resume
+  retries: 5                 # attempts per piece
+
+# Folder containing ffmpeg/ffprobe, or null to use the bundled copy in
+# .runtime/ffmpeg/bin
+ffmpeg_path: null

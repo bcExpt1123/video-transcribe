@@ -1,0 +1,42 @@
+[project]
+name = "video-transcribe"
+version = "1.0.0"
+description = "Offline EN/CN video transcription with accurately timed, styled subtitles (MP4/WEBM)."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT" }
+dependencies = [
+    "faster-whisper>=1.1.0",
+    "transformers>=4.40,<5",
+    "torch>=2.2",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "opencc-python-reimplemented>=0.1.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+vt = "video_transcribe.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/video_transcribe"]
+
+# Use the CPU-only PyTorch wheels (avoids ~2.5 GB of CUDA libraries).
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider -m \"not slow\""
+markers = ["slow: end-to-end tests that run real models (deselect with -m 'not slow')"]

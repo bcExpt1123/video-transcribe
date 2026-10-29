@@ -1,0 +1,13 @@
+.runtime/
+.venv/
+models/
+fonts/*.otf
+fonts/*.ttf
+output/
+work/
+__pycache__/
+*.pyc
+.pytest_cache/
+uv.lock.bak
+pytest-cache-files-*/
+.setup.log
